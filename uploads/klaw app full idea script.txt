@@ -1,0 +1,213 @@
+Project Workflow
+Mobile App
+Primary Functionality:
+Allows students to interact with AI-powered chatbots associated with specific subjects to study the content.
+Data Source:
+Fetches published subject data and files via APIs created by the backend.
+Web App (Admin Interface)
+1. Introductory Page
+Contains the following:
+Login Form: Allows admin to log in with a username and passkey.
+About Button: Redirects to an informational page (no backend logic required).
+Contact Button: Redirects to a contact page (no backend logic required).
+2. Login
+Input Fields: Username and passkey.
+Validation: Verifies admin credentials using DRF authentication.
+Successful Login: Redirects the admin to the dashboard.
+3. Dashboard
+Inactive Buttons:
+Usage
+Blog Creation
+User Management
+These features are placeholders for future versions.
+Active Button:
+Add Subjects
+Add Subjects Page
+Existing Subjects
+Displays a list of added subjects, each represented as a card or list item.
+Each subject includes a hamburger menu with the following options:
+Publish: Marks the subject as published, making it visible and accessible in the mobile app.
+Draft: Marks the subject as a draft, allowing it to be edited but not visible in the mobile app.
+Delete: Permanently removes the subject and associated data from the system.
+Add New Subject
+A button labeled "Add Subjects" navigates to a form where admins can add a new subject.
+Form Fields:
+Title/Course Name
+Course Code
+University
+Description
+Choose Your File: Allows uploading of files (PDF or TXT).
+File Upload and Vectorization
+When a file is uploaded:
+Files are saved to the local storage (media/ directory).
+Vectorization is triggered using a custom add() function.
+Result:
+Files are vectorized and linked to the course for search optimization.
+Metadata about vectorization (e.g., success/failure) is stored in the database.
+API Functionalities
+Add Course API
+
+Validates if the course_code already exists.
+Saves course details and triggers file vectorization.
+Returns a response with the vectorization status for each file.
+Edit Course API
+
+Allows updating all course fields except for the uploaded files.
+Enables adding new files, which triggers vectorization for the new files only.
+Returns a response with the updated course details and vectorization statuses.
+Toggle Course Status API
+
+Allows toggling the status of a course between draft and published.
+Deletes a course if specified.
+Updates the status in the database and ensures the mobile app reflects the changes.
+Get Courses API
+
+Fetches all courses added by the admin.
+Returns a list with details of all courses, including their current status and metadata.
+Database Design
+Course Model
+_id: MongoDB ObjectId (default primary key).
+title: The name of the course.
+course_code: Unique identifier for the course.
+university: The affiliated university for the course.
+description: A brief description of the course.
+file_input: A list of paths for uploaded files.
+vectorized_data: Stores metadata about vectorization, including status and details.
+status: Indicates whether the course is draft or published.
+Version 1 Scope
+Focus on implementing essential backend APIs and database logic.
+Ensure smooth integration between the admin web app and mobile app for core features.
+Postpone non-essential features (usage analytics, blog creation, user management) for future updates.
+
+
+The project is well-structured and aligns with modern app development practices, emphasizing modularity between admin and mobile app functionalities. Below are my inferences, recommendations, and an overview of expected endpoints:
+
+---
+
+### **Inferences:**
+1. **Core Objective:**  
+   - Enable admin control over courses and their visibility in the mobile app.  
+   - Allow students to explore, interact with, and learn subjects through chatbot integration.  
+
+2. **Critical Challenges:**  
+   - **OTP Verification (Twilio)**: Proper handling of rate limits, retries, and security.  
+   - **Database Relationships:** Keeping mobile and admin-side data in sync while ensuring performance and scalability.  
+   - **AI Integration:** Ensuring seamless interaction with the chatbot service while passing accurate inputs (course code and user queries).  
+
+3. **Scope for Complexity:**  
+   - Linking subject data between admin and student user interfaces dynamically.  
+   - Proper error handling for key processes like file upload, vectorization, and API calls to AI/chatbot services.  
+
+4. **Versioning Clarity:**  
+   - Postponing secondary features (analytics, blog creation, user management) for future releases is a good decision, allowing focus on core functionalities.
+
+---
+
+### **Expected Endpoints**  
+Here’s a breakdown of endpoints needed for the mobile app (along with their roles):
+
+#### **Authentication Endpoints**  
+1. **Sign-Up API**:  
+   - **POST /api/signup/**  
+     Inputs: `phone_number`, `otp`, `full_name`, `email`, `password`, `college`, `department`, `university`, `blood_group`.  
+     Process: Verify OTP, save user data, return success or failure.  
+
+2. **OTP Request API**:  
+   - **POST /api/request-otp/**  
+     Inputs: `phone_number`.  
+     Process: Generate OTP using Twilio, send to user, return status.  
+
+3. **Login API**:  
+   - **POST /api/login/**  
+     Inputs: `phone_number` + `password` OR `phone_number` + `otp`.  
+     Process: Validate credentials, return authentication token if valid.  
+
+4. **Forgot Password API**:  
+   - **POST /api/forgot-password/**  
+     Inputs: `phone_number`, `new_password`, `confirm_password`, `otp`.  
+     Process: Verify OTP, update password, return success or failure.  
+
+---
+
+#### **User Profile Endpoints**  
+5. **View Profile API**:  
+   - **GET /api/profile/**  
+     Authenticated request.  
+     Returns user details (`full_name`, `email`, etc.).  
+
+6. **Update Profile API**:  
+   - **PUT /api/profile/update/**  
+     Inputs: Updated fields (e.g., `email`, `college`, etc.).  
+     Process: Save updates, return success or failure.  
+
+---
+
+#### **Subject Interaction Endpoints**  
+7. **List Available Subjects API**:  
+   - **GET /api/subjects/available/**  
+     Returns all published subjects (`title`, `course_code`, `university`, `description`).  
+
+8. **View Subject Details API**:  
+   - **GET /api/subjects/{course_code}/**  
+     Returns detailed description of the subject.  
+
+9. **Add to Preferred Subjects API**:  
+   - **POST /api/subjects/preferred/**  
+     Inputs: `course_code`.  
+     Process: Link subject to the user’s preferred list.  
+
+10. **Remove from Preferred Subjects API**:  
+    - **DELETE /api/subjects/preferred/{course_code}/**  
+      Process: Unlink subject from user’s preferred list.  
+
+11. **List Preferred Subjects API**:  
+    - **GET /api/subjects/preferred/**  
+      Returns all subjects in the user’s preferred list.  
+
+---
+
+#### **Chatbot Interaction Endpoints**  
+12. **Invoke Chatbot API**:  
+    - **POST /api/chat/**  
+      Inputs: `course_code`, `query`.  
+      Process: Forward query and course code to the AI backend, return response.  
+
+---
+
+#### **Utility Endpoints**  
+13. **Logout API**:  
+    - **POST /api/logout/**  
+      Process: Invalidate authentication token.  
+
+---
+
+### **Recommendations**  
+
+#### **For OTP Generation and Verification:**  
+1. Use **Twilio** for generating and sending OTPs.  
+2. Add a rate-limiting mechanism to prevent spam.  
+3. Store OTPs with an expiration timestamp in a temporary Redis database for quick access and better scalability.  
+4. Encrypt OTPs during storage for added security.
+
+---
+
+#### **For Database Management:**  
+1. Use a **relational database** (e.g., PostgreSQL) for handling admin and user data.  
+2. Store subject files and vectorized data paths using a combination of local storage (or S3) and metadata linking.  
+3. Establish relationships between the `User` table and the `Course` table for user-specific preferences.  
+
+---
+
+#### **For AI/Chatbot Integration:**  
+1. Ensure API requests to the chatbot service are asynchronous for better performance.  
+2. Maintain logs of chatbot interactions for future analytics (optional).  
+
+---
+
+#### **Scalability and Error Handling:**  
+1. Implement caching (e.g., Redis) for frequently accessed data like subject lists.  
+2. Add robust error-handling mechanisms in the backend to gracefully handle failures during file upload, vectorization, and API calls.  
+
+---
+
+This structure ensures your project remains modular, scalable, and ready for future feature additions. Let me know if you'd like detailed implementation guidance on any specific aspect!

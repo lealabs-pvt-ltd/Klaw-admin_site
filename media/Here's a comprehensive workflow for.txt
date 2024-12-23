@@ -1,0 +1,152 @@
+Here's a comprehensive workflow for the **mobile app** in terms of backend processes, breaking down each interaction into steps that ensure proper functionality for your backend development responsibilities:
+
+---
+
+## **Full Workflow of the App**  
+
+### **1. Authentication and User Management**  
+#### **Sign-Up (New User Registration)**  
+1. **User Action:**  
+   User opens the app, clicks "Sign-Up," and enters their phone number.  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/request-otp/`**.  
+   - OTP is generated (via Twilio) and stored in a temporary database (e.g., Redis) with a time-to-live (TTL).  
+   - Response confirms OTP sent.  
+
+3. **User Action:**  
+   User enters the OTP and submits.  
+
+4. **Backend Process:**  
+   - Request goes to **`/api/signup/`** with OTP and user details.  
+   - Backend validates the OTP.  
+   - On successful validation, user details (e.g., name, email, password, college, department) are stored in the database.  
+   - Response confirms sign-up, and user is redirected to the login page.  
+
+#### **Login (Existing User)**  
+1. **User Action:**  
+   User chooses one of the login methods:  
+   - **Phone + Password** or  
+   - **Phone + OTP**  
+
+2. **Backend Process:**  
+   - **Phone + Password:**  
+     - Request goes to **`/api/login/`**.  
+     - Credentials are validated.  
+     - On success, an authentication token (e.g., JWT) is returned.  
+   - **Phone + OTP:**  
+     - Request OTP via **`/api/request-otp/`**, then validate via **`/api/login/`** with OTP.  
+     - On success, an authentication token is returned.  
+
+3. **Forgot Password:**  
+   - User requests OTP via **`/api/request-otp/`**.  
+   - Backend validates OTP and allows password reset via **`/api/forgot-password/`**.  
+
+---
+
+### **2. Post-Login Navigation and User Profile**  
+#### **Home Page**  
+- Once logged in, the backend provides the authenticated user’s profile and settings.  
+
+#### **View Profile**  
+1. **User Action:**  
+   Opens the "View Profile" page.  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/profile/`**.  
+   - Backend retrieves user details (name, email, college, etc.) and sends the response.  
+
+#### **Edit Profile**  
+1. **User Action:**  
+   Updates fields in the profile (e.g., email, college).  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/profile/update/`** with updated fields.  
+   - Backend updates the user record in the database and sends a confirmation response.  
+
+---
+
+### **3. Subject Interaction Workflow**  
+#### **Preferred Subjects List**  
+1. **User Action:**  
+   Navigates to the "Preferred Subjects" page.  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/subjects/preferred/`**.  
+   - Backend retrieves a list of subjects linked to the user and returns their details (title, course code, university, etc.).  
+
+3. **Add Subject to Preferred List:**  
+   - User clicks the "Add Subjects" button.  
+   - Backend retrieves a list of **available subjects** via **`/api/subjects/available/`**.  
+
+4. **Learn More:**  
+   - User selects a subject and clicks "Learn More."  
+   - Backend fetches the detailed subject description via **`/api/subjects/{course_code}/`**.  
+
+5. **Add to List:**  
+   - User clicks "Add to Preferred List."  
+   - Request goes to **`/api/subjects/preferred/`** with the `course_code`.  
+   - Backend links the subject to the user’s preferred list.  
+
+6. **Remove from List:**  
+   - User clicks "Remove" on a subject in their preferred list.  
+   - Request goes to **`/api/subjects/preferred/{course_code}/`** (DELETE).  
+   - Backend unlinks the subject from the user.  
+
+---
+
+#### **Chat Interaction**  
+1. **User Action:**  
+   User clicks "Chat" on a subject in their preferred list or from the subject description page.  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/chat/`** with inputs:  
+     - `course_code`: Identifies the subject.  
+     - `query`: User's input for the chatbot.  
+   - Backend forwards the request to the AI service (handled by another developer).  
+   - AI returns the response, which the backend relays to the mobile app.  
+
+---
+
+### **4. Logout**  
+1. **User Action:**  
+   Clicks "Logout."  
+
+2. **Backend Process:**  
+   - Request goes to **`/api/logout/`**.  
+   - Backend invalidates the user’s authentication token and confirms logout.  
+
+---
+
+### **5. Admin-Side Integration**  
+- **Courses Sync:**  
+  - The backend ensures all courses added via the admin interface are accessible to the mobile app.  
+  - **Publish/Draft Toggle:**  
+    - When a subject is toggled to "published," it becomes available in **`/api/subjects/available/`** for mobile users.  
+  - **Delete Sync:**  
+    - Deleting a subject on the admin side removes it from mobile users’ available and preferred lists.  
+
+- **File Vectorization:**  
+  - Admin file uploads trigger vectorization.  
+  - Vectorized metadata is linked to subjects and ready for chatbot use.  
+
+---
+
+### **Backend Workflow Highlights**  
+- **Database Relationships:**  
+  - `User` → Linked to `PreferredSubjects`.  
+  - `Course` → Includes uploaded files, vectorized data, and status (`draft`/`published`).  
+
+- **Key Processes:**  
+  1. **Authentication:** Manage user tokens securely (e.g., JWT).  
+  2. **OTP Management:** Use Redis or similar to store OTPs with expiration.  
+  3. **Subject Syncing:** Ensure real-time syncing between admin-side actions and mobile app content.  
+  4. **AI Invocation:** Relay queries seamlessly to the AI developer’s service.  
+
+- **Error Handling:**  
+  - Handle timeouts and failures for AI API calls, OTP verification, and database updates gracefully with descriptive error responses.  
+
+---
+
+### **Conclusion**  
+This workflow separates responsibilities efficiently. The backend ensures smooth user management, subject syncing, and integration with the admin side and AI services. Let me know if you'd like further details on specific APIs or workflows!

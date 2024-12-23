@@ -1,0 +1,80 @@
+Project Workflow
+Mobile App
+Primary Functionality:
+Allows students to interact with AI-powered chatbots associated with specific subjects to study the content.
+Data Source:
+Fetches published subject data and files via APIs created by the backend.
+Web App (Admin Interface)
+1. Introductory Page
+Contains the following:
+Login Form: Allows admin to log in with a username and passkey.
+About Button: Redirects to an informational page (no backend logic required).
+Contact Button: Redirects to a contact page (no backend logic required).
+2. Login
+Input Fields: Username and passkey.
+Validation: Verifies admin credentials using DRF authentication.
+Successful Login: Redirects the admin to the dashboard.
+3. Dashboard
+Inactive Buttons:
+Usage
+Blog Creation
+User Management
+These features are placeholders for future versions.
+Active Button:
+Add Subjects
+Add Subjects Page
+Existing Subjects
+Displays a list of added subjects, each represented as a card or list item.
+Each subject includes a hamburger menu with the following options:
+Publish: Marks the subject as published, making it visible and accessible in the mobile app.
+Draft: Marks the subject as a draft, allowing it to be edited but not visible in the mobile app.
+Delete: Permanently removes the subject and associated data from the system.
+Add New Subject
+A button labeled "Add Subjects" navigates to a form where admins can add a new subject.
+Form Fields:
+Title/Course Name
+Course Code
+University
+Description
+Choose Your File: Allows uploading of files (PDF or TXT).
+File Upload and Vectorization
+When a file is uploaded:
+Files are saved to the local storage (media/ directory).
+Vectorization is triggered using a custom add() function.
+Result:
+Files are vectorized and linked to the course for search optimization.
+Metadata about vectorization (e.g., success/failure) is stored in the database.
+API Functionalities
+Add Course API
+
+Validates if the course_code already exists.
+Saves course details and triggers file vectorization.
+Returns a response with the vectorization status for each file.
+Edit Course API
+
+Allows updating all course fields except for the uploaded files.
+Enables adding new files, which triggers vectorization for the new files only.
+Returns a response with the updated course details and vectorization statuses.
+Toggle Course Status API
+
+Allows toggling the status of a course between draft and published.
+Deletes a course if specified.
+Updates the status in the database and ensures the mobile app reflects the changes.
+Get Courses API
+
+Fetches all courses added by the admin.
+Returns a list with details of all courses, including their current status and metadata.
+Database Design
+Course Model
+_id: MongoDB ObjectId (default primary key).
+title: The name of the course.
+course_code: Unique identifier for the course.
+university: The affiliated university for the course.
+description: A brief description of the course.
+file_input: A list of paths for uploaded files.
+vectorized_data: Stores metadata about vectorization, including status and details.
+status: Indicates whether the course is draft or published.
+Version 1 Scope
+Focus on implementing essential backend APIs and database logic.
+Ensure smooth integration between the admin web app and mobile app for core features.
+Postpone non-essential features (usage analytics, blog creation, user management) for future updates.
