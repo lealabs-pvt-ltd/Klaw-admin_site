@@ -1,0 +1,25 @@
+# Django
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.sqlite3
+*.log
+
+# Environment variables
+.env
+
+# Media files
+media/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Django migrations (optional, if you don’t want to commit migrations)
+# */migrations/*

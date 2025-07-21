@@ -18,7 +18,5 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path('api/admin/', include('admin_panel.urls')),
-    #path('contact/',ContactFormView.as_view(), name='contact_form'), 
 ]

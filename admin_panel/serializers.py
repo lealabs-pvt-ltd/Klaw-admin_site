@@ -1,185 +1,198 @@
 from rest_framework import serializers
+from .models import CourseBasicInfo, CourseOutcome, CourseSyllabus, CourseQuestion, CourseMaterial, Course, Contact, Blog, Notification
+import os
+from django.core.files.storage import FileSystemStorage
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AdminLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
+class CourseBasicInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseBasicInfo
+        fields = ['course_name', 'course_code', 'year', 'branch', 'semester', 'group']
 
-# from .models import Course
-# import os
+    def validate_course_code(self, value):
+        if CourseBasicInfo.objects.filter(course_code=value).exists():
+            raise serializers.ValidationError("Course code already exists.")
+        return value
 
-# class CourseSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Course
-#         fields = '__all__'
+class CourseOutcomeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseOutcome
+        fields = ['course_code', 'short_form', 'outcome']
 
-#     def validate_file_input(self, value):
-#         # Check if the file is a PDF or TXT
-#         valid_extensions = ['.pdf', '.txt']
-#         ext = os.path.splitext(value.name)[1].lower()
-#         if ext not in valid_extensions:
-#             raise serializers.ValidationError("Only PDF and TXT files are allowed.")
-        
-#         # Check if the file size is less than or equal to 20MB
-#         max_size = 20 * 1024 * 1024  # 20MB
-#         if value.size > max_size:
-#             raise serializers.ValidationError("File size cannot exceed 20MB.")
-        
-#         return value
+    def validate(self, data):
+        if not data.get('course_code'):
+            raise serializers.ValidationError({"course_code": "This field is required."})
+        if not data.get('short_form') or not data['short_form'].strip():
+            raise serializers.ValidationError({"short_form": "This field is required and cannot be empty."})
+        if not data.get('outcome') or not data['outcome'].strip():
+            raise serializers.ValidationError({"outcome": "This field is required and cannot be empty."})
+        if not CourseBasicInfo.objects.filter(course_code=data['course_code']).exists():
+            raise serializers.ValidationError({"course_code": "Course code does not exist."})
+        return data
 
-from rest_framework import serializers
-from .models import Course
-import os
-class CourseSerializer(serializers.ModelSerializer):
-    file_input = serializers.ListField(
-        child=serializers.FileField(),
-        write_only=True,
-        required=False  # Optional for updates
-    )
-    university = serializers.CharField(default="Not Provided", allow_blank=True)
-    description = serializers.CharField(default="No description available.", allow_blank=True)
-    status = serializers.ChoiceField(choices=Course.STATUS_CHOICES, required=True)  # Make status required
+class CourseSyllabusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseSyllabus
+        fields = ['course_code', 'syllabus_item']
+
+    def validate_course_code(self, value):
+        if not CourseBasicInfo.objects.filter(course_code=value).exists():
+            raise serializers.ValidationError("Course code does not exist.")
+        return value
+
+class CourseQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseQuestion
+        fields = ['course_code', 'question']
+
+    def validate_course_code(self, value):
+        if not CourseBasicInfo.objects.filter(course_code=value).exists():
+            raise serializers.ValidationError("Course code does not exist.")
+        return value
+
+class CourseMaterialSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(write_only=True)
+    file_type = serializers.CharField()
+    file_path = serializers.CharField(read_only=True)
 
     class Meta:
-        model = Course
-        fields = '__all__'
+        model = CourseMaterial
+        fields = ['course_code', 'file', 'file_type', 'file_path']
 
-    def validate_file_input(self, value):
+    def validate_file(self, value):
         valid_extensions = ['.pdf', '.txt']
-        max_size = 20 * 1024 * 1024  # 20MB per file
+        max_size = 100 * 1024 * 1024  # 100MB
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in valid_extensions:
+            raise serializers.ValidationError(f"File '{value.name}' has invalid extension. Only PDF and TXT allowed.")
+        if value.size > max_size:
+            raise serializers.ValidationError(f"File '{value.name}' exceeds 100MB limit.")
+        return value
 
-        for file in value:
-            # Validate file extension
-            ext = os.path.splitext(file.name)[1].lower()
-            if ext not in valid_extensions:
-                raise serializers.ValidationError(
-                    f"File '{file.name}' has an invalid extension. Only PDF and TXT files are allowed."
-                )
-
-            # Validate file size
-            if file.size > max_size:
-                raise serializers.ValidationError(
-                    f"File '{file.name}' exceeds the size limit of 20MB."
-                )
-
+    def validate_course_code(self, value):
+        if not CourseBasicInfo.objects.filter(course_code=value).exists():
+            raise serializers.ValidationError("Course code does not exist.")
         return value
 
     def create(self, validated_data):
-        # Extract file input
-        files = validated_data.pop('file_input', [])
-        file_paths = []
-        status = validated_data.get('status', 'draft')  # Ensure status is passed correctly
-
-        # Save the files to disk and collect file paths
-        for file in files:
-            file_path = f"uploads/{file.name}"
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, 'wb') as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
-            file_paths.append(file_path)
-
-        # Create the Course instance and save metadata along with file paths
-        course = Course.objects.create(
-            title=validated_data['title'],
+        file = validated_data.pop('file')
+        file_type = validated_data.pop('file_type')
+        fs = FileSystemStorage(location='media/')
+        filename = fs.save(file.name, file)
+        file_path = fs.url(filename)  # Store relative path
+        return CourseMaterial.objects.create(
             course_code=validated_data['course_code'],
-            university=validated_data.get('university', 'Not Provided'),
-            description=validated_data.get('description', 'No description available.'),
-            file_input=file_paths,
-            status=status  # Pass the correct status
+            file_path=file_path,
+            file_type=file_type
         )
 
-        # Assuming vectorization will be handled after saving the files
-        course.vectorized_data = {"status": "pending", "details": "Vectorization in progress."}
-        course.save()
+class CourseDetailSerializer(serializers.ModelSerializer):
+    basic_info = serializers.SerializerMethodField()
+    outcomes = serializers.SerializerMethodField()
+    syllabus = serializers.SerializerMethodField()
+    questions = serializers.SerializerMethodField()
+    materials = serializers.SerializerMethodField()
 
+    class Meta:
+        model = Course
+        fields = ['course_code', 'status', 'basic_info', 'outcomes', 'syllabus', 'questions', 'materials', 'created_at', 'updated_at']
+
+    def get_basic_info(self, obj):
+        try:
+            basic_info = CourseBasicInfo.objects.get(course_code=obj.course_code)
+            return CourseBasicInfoSerializer(basic_info).data
+        except CourseBasicInfo.DoesNotExist:
+            return None
+
+    def get_outcomes(self, obj):
+        outcomes = CourseOutcome.objects.filter(course_code=obj.course_code)
+        return CourseOutcomeSerializer(outcomes, many=True).data
+
+    def get_syllabus(self, obj):
+        syllabus = CourseSyllabus.objects.filter(course_code=obj.course_code)
+        return CourseSyllabusSerializer(syllabus, many=True).data
+
+    def get_questions(self, obj):
+        questions = CourseQuestion.objects.filter(course_code=obj.course_code)
+        return CourseQuestionSerializer(questions, many=True).data
+
+    def get_materials(self, obj):
+        materials = CourseMaterial.objects.filter(course_code=obj.course_code)
+        return [{'file_path': m.file_path, 'file_type': m.file_type} for m in materials]
+
+class CourseFinalSerializer(serializers.ModelSerializer):
+    materials = CourseMaterialSerializer(many=True)
+    status = serializers.ChoiceField(choices=Course.STATUS_CHOICES, default='draft')
+
+    class Meta:
+        model = Course
+        fields = ['course_code', 'status', 'materials']
+
+    def validate(self, data):
+        if not data.get('course_code'):
+            raise serializers.ValidationError({"course_code": "This field is required."})
+        if not data.get('materials'):
+            raise serializers.ValidationError({"materials": "At least one material is required."})
+        if not CourseBasicInfo.objects.filter(course_code=data['course_code']).exists():
+            raise serializers.ValidationError({"course_code": "Course code does not exist."})
+        if Course.objects.filter(course_code=data['course_code']).exists():
+            raise serializers.ValidationError({"course_code": "Course already finalized."})
+        return data
+
+    def create(self, validated_data):
+        materials_data = validated_data.pop('materials')
+        course = Course.objects.create(**validated_data)
+        
+        fs = FileSystemStorage(location='media/')
+        for material_data in materials_data:
+            file = material_data.pop('file')
+            file_type = material_data.pop('file_type')
+            filename = fs.save(file.name, file)
+            file_path = fs.url(filename)  # Store relative path
+            CourseMaterial.objects.create(
+                course_code=validated_data['course_code'],
+                file_path=file_path,
+                file_type=file_type
+            )
+        
         return course
-
-    def update(self, instance, validated_data):
-        # Update basic fields
-        for attr, value in validated_data.items():
-            if attr != "file_input":
-                setattr(instance, attr, value)
-
-        # Handle file updates (if provided)
-        new_files = validated_data.get('file_input', [])
-        if new_files:
-            file_paths = instance.file_input
-            for file in new_files:
-                file_path = f"uploads/{file.name}"
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                with open(file_path, 'wb') as f:
-                    for chunk in file.chunks():
-                        f.write(chunk)
-                file_paths.append(file_path)
-
-            # Save updated file paths
-            instance.file_input = file_paths
-
-        instance.save()
-        return instance
-
-
-
-
-from .models import Contact
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = '__all__'
 
+class BlogSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    status = serializers.ChoiceField(choices=Blog.STATUS_CHOICES, default='draft')
 
+    class Meta:
+        model = Blog
+        fields = ['id', 'title', 'author', 'category', 'html_code', 'created_at', 'status']
 
+    def validate(self, data):
+        if not data.get('title'):
+            raise serializers.ValidationError({"title": "This field is required."})
+        if not data.get('author'):
+            raise serializers.ValidationError({"author": "This field is required."})
+        if not data.get('category'):
+            raise serializers.ValidationError({"category": "This field is required."})
+        return data
 
-# from .models import DummyCourse
-# from rest_framework import serializers
-# import os
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'created_at']
 
-# class DummyCourseSerializer(serializers.ModelSerializer):
-#     file_inputs = serializers.ListField(
-#         child=serializers.FileField(),
-#         allow_empty=False,
-#         write_only=True
-#     )
-
-#     class Meta:
-        
-#         model = DummyCourse
-#         fields = '__all__'
-
-#     def validate_file_inputs(self, value):
-#         valid_extensions = ['.pdf', '.txt']
-#         max_size = 20 * 1024 * 1024  # 20MB per file
-
-#         for file in value:
-#             # Validate file extension
-#             ext = os.path.splitext(file.name)[1].lower()
-#             if ext not in valid_extensions:
-#                 raise serializers.ValidationError(
-#                     f"File '{file.name}' has an invalid extension. Only PDF and TXT files are allowed."
-#                 )
-            
-#             # Validate file size
-#             if file.size > max_size:
-#                 raise serializers.ValidationError(
-#                     f"File '{file.name}' exceeds the size limit of 20MB."
-#                 )
-
-#         return value
-
-#     def create(self, validated_data):
-#         files = validated_data.pop('file_inputs')
-#         file_paths = []
-        
-#         # Save files to disk
-#         for file in files:
-#             file_path = f"uploads/{file.name}"
-#             with open(file_path, 'wb') as f:
-#                 for chunk in file.chunks():
-#                     f.write(chunk)
-#             file_paths.append(file_path)
-
-#         # Save metadata into the model
-#         dummy_course = DummyCourse.objects.create(title=validated_data['title'], file_inputs=file_paths)
-#         return dummy_course
+    def validate(self, data):
+        if not data.get('title') or not data['title'].strip():
+            raise serializers.ValidationError({"title": "Title is required and cannot be empty."})
+        if not data.get('message') or not data['message'].strip():
+            raise serializers.ValidationError({"message": "Message is required and cannot be empty."})
+        return data

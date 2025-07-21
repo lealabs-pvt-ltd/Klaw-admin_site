@@ -44,8 +44,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
-    'admin_panel',  
     'corsheaders',
+    'admin_panel',  
+    
     
 ]
 
@@ -114,9 +115,9 @@ WSGI_APPLICATION = "klaw_app.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',  # Use Djongo as the engine
-        'NAME': 'klaw_db1',  # Your database name in MongoDB Atlas
+        'NAME': 'klaw_db_dev',  # Your database name in MongoDB Atlas
         'CLIENT': {
-            'host': 'mongodb+srv://igniteprojects02:igniteadmin@flaws.9pgqc.mongodb.net/flawsapp?retryWrites=true&w=majority&ssl=true&appName=klaw_app',  # Your MongoDB Atlas connection string
+            'host': 'mongodb://admin:developer2025@13.204.52.164:27017',  # Your MongoDB Atlas connection string
             'retryWrites': True,
             'w': 'majority',
         },
@@ -124,17 +125,7 @@ DATABASES = {
 }
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'djongo',
-#         'NAME': os.getenv('DATABASE_NAME', 'klaw_db'),  # Default to 'klaw_db' if not set
-#         'CLIENT': {
-#             'host': os.getenv('DATABASE_URL', 'mongodb+srv://igniteprojects02:igniteadmin@flaws.9pgqc.mongodb.net/klaw_db'),  # Remove the extra space at the end
-#             'retryWrites': True,
-#             'w': 'majority',
-#         },
-#     }
-# }
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -151,7 +142,7 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
@@ -216,3 +207,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+from decouple import config
+GOOGLE_APPLICATION_CREDENTIALS = config('GOOGLE_APPLICATION_CREDENTIALS')
