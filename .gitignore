@@ -11,7 +11,7 @@ venv/
 
 # Environment variables
 .env
-
+credentials/
 # Media files
 media/
 
