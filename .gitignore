@@ -11,8 +11,8 @@ venv/
 
 # Environment variables
 .env
-# Local settings
-credentials/
+# .gitignore
+credentials/*.json
 # Media files
 media/
 
@@ -23,4 +23,4 @@ media/
 *.swo
 
 # Django migrations (optional, if you don’t want to commit migrations)
-# */migrations/*
+ */migrations/*credentials/*.json
