@@ -1,7 +1,8 @@
-# admin/Dockerfile
-FROM python:3.9.20-slim
+# Dockerfile
 
-WORKDIR /app
+FROM python:3.10-slim
+
+WORKDIR /admin
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -10,5 +11,4 @@ COPY . .
 
 EXPOSE 8000
 
-# Combine commands into a single CMD
-CMD ["python3 manage.py makemigrations && python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
